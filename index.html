@@ -3,464 +3,330 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Battery Thermal & Aging Analysis</title>
+    <title>電池發熱瓦特數計算 V3.5</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@400;700&display=swap" rel="stylesheet">
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800;900&family=JetBrains+Mono:wght@400;700&family=Noto+Sans+TC:wght@400;700;900&display=swap');
+        
         :root {
-            --industrial-gray: #2b2d31;
-            --industrial-black: #1e1f22;
-            --accent-orange: #f39c12;
-            --accent-red: #e74c3c;
-            --text-silver: #cfd2d5;
+            --accent-color: #f59e0b;
+            --bg-dark: #0a0a0a;
+            --panel-bg: #171717;
+            --lcd-glow: rgba(245, 158, 11, 0.5);
+            --text-bright: #ffffff;
+            --text-muted: #a1a1aa;
         }
+
         body {
-            background-color: var(--industrial-black);
-            color: var(--text-silver);
-            font-family: 'JetBrains+Mono', 'Noto+Sans+TC', sans-serif;
-            user-select: none;
-            overflow-x: hidden;
+            background-color: var(--bg-dark);
+            background-image: 
+                linear-gradient(rgba(255, 255, 255, 0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255, 255, 255, 0.02) 1px, transparent 1px);
+            background-size: 40px 40px;
+            color: var(--text-bright);
+            font-family: 'Inter', 'Noto Sans TC', sans-serif;
+            -webkit-font-smoothing: antialiased;
         }
+
+        .mono-font { font-family: 'JetBrains+Mono', monospace; }
+
         .industrial-card {
-            background: var(--industrial-gray);
-            border-top: 2px solid #404249;
-            box-shadow: inset 0 1px 1px rgba(255,255,255,0.05), 0 10px 20px rgba(0,0,0,0.5);
-        }
-        .input-group {
-            background: #18191b;
-            border: 1px solid #3f4147;
-            transition: all 0.2s;
-        }
-        .input-group:focus-within {
-            border-color: var(--accent-orange);
-            box-shadow: 0 0 0 1px var(--accent-orange);
-        }
-        input[type="number"] {
-            background: transparent !important;
-            border: none !important;
-            color: #fff !important;
-            outline: none !important;
-            width: 100%;
-            padding: 0.5rem;
-        }
-        input[type="range"] {
-            -webkit-appearance: none;
-            width: 100%;
-            height: 12px;
-            background: #18191b;
-            border-radius: 6px;
-            outline: none;
-            border: 1px solid #3f4147;
-        }
-        input[type="range"]::-webkit-slider-thumb {
-            -webkit-appearance: none;
-            appearance: none;
-            width: 24px;
-            height: 24px;
-            background: var(--accent-orange);
-            cursor: pointer;
+            background: var(--panel-bg);
+            border: 1px solid #333;
+            box-shadow: 20px 20px 60px #050505, -5px -5px 20px #1a1a1a;
+            padding: 40px;
+            position: relative;
             border-radius: 4px;
-            box-shadow: 0 0 10px rgba(243, 156, 18, 0.5);
-            border: 2px solid #fff;
         }
-        .label-text {
-            color: var(--accent-orange);
+
+        .tab-btn {
+            padding: 10px 24px;
+            font-size: 0.75rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            border: 1px solid #333;
+            color: #71717a;
+            transition: all 0.2s;
+            background: #0d0d0d;
+        }
+        .tab-btn.active {
+            background: var(--accent-color);
+            color: #000;
+            border-color: var(--accent-color);
+        }
+
+        .input-field {
+            background: #0d0d0d;
+            border: 1px solid #444;
+            color: var(--accent-color);
+            font-family: 'JetBrains+Mono', monospace;
+            font-size: 1.1rem;
             font-weight: 700;
+            padding: 14px;
+            border-radius: 4px;
+            width: 100%;
+        }
+
+        .select-field {
+            background: #0d0d0d;
+            border: 1px solid #444;
+            color: var(--text-bright);
+            font-weight: 700;
+            padding: 14px;
+            border-radius: 4px;
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .label-text {
+            color: #d1d5db;
             text-transform: uppercase;
             font-size: 0.75rem;
-            letter-spacing: 1.5px;
-            display: block;
-            margin-bottom: 0.25rem;
-        }
-        .unit-tag {
-            background: #2b2d31;
-            color: #72767d;
-            font-size: 0.7rem;
-            padding: 0 0.5rem;
-            border-left: 1px solid #3f4147;
+            font-weight: 800;
+            letter-spacing: 0.15em;
+            margin-bottom: 10px;
             display: flex;
             align-items: center;
+            gap: 8px;
         }
-        .status-light {
-            width: 8px;
-            height: 8px;
-            border-radius: 50%;
-            display: inline-block;
-            margin-right: 6px;
+        .label-text::before {
+            content: ""; width: 6px; height: 6px; background: var(--accent-color); display: inline-block;
         }
-        .grid-bg {
-            background-image: linear-gradient(#2d2f34 1px, transparent 1px), linear-gradient(90deg, #2d2f34 1px, transparent 1px);
-            background-size: 20px 20px;
+
+        .result-panel {
+            background: #0a1124;
+            border: 1px solid #1e293b;
+            padding: 30px;
+            border-radius: 8px;
         }
-        .mode-btn {
-            background: #18191b;
-            border: 1px solid #3f4147;
-            color: #72767d;
-            transition: all 0.3s;
+
+        .lcd-text {
+            color: var(--accent-color);
+            font-family: 'Inter', sans-serif;
+            font-weight: 900;
+            letter-spacing: -0.04em;
+            text-shadow: 0 0 30px var(--lcd-glow);
         }
-        .mode-btn.active-discharge {
-            background: #92400e;
-            color: white;
-            border-color: var(--accent-orange);
-        }
-        .mode-btn.active-charge {
-            background: #1e40af;
-            color: white;
-            border-color: #3b82f6;
-        }
-        .nav-btn {
-            background: #18191b;
-            border: 1px solid #3f4147;
-            color: #cfd2d5;
-            padding: 4px 12px;
-            font-size: 12px;
-            font-weight: bold;
-            transition: all 0.2s;
-        }
-        .nav-btn:hover {
-            border-color: var(--accent-orange);
-            color: #fff;
-        }
-        .nav-btn.active {
-            background: var(--accent-orange);
-            color: #000;
-            border-color: #fff;
-        }
-        .page {
-            display: none;
-        }
-        .page.active {
-            display: block;
-        }
-        .avg-box {
-            background: linear-gradient(45deg, #18191b, #2b2d31);
-            border: 1px solid #404249;
-        }
+
+        .hidden { display: none; }
+        
+        input[type=range] { accent-color: var(--accent-color); }
     </style>
+    <script src="https://polyfill.io/v3/polyfill.min.js?features=es6"></script>
+    <script id="MathJax-script" async src="https://cdn.jsdelivr.net/npm/mathjax@3/es5/tex-mml-chtml.js"></script>
 </head>
-<body class="p-4 md:p-10 grid-bg">
-    <div class="max-w-5xl mx-auto">
-        <!-- Header -->
-        <header class="flex flex-col md:flex-row md:items-end justify-between mb-8 gap-4">
+<body class="p-6 md:p-16">
+    <div class="max-w-4xl mx-auto">
+        <header class="mb-8 flex flex-col md:flex-row justify-between items-start md:items-center gap-6 border-b border-zinc-700 pb-6">
             <div>
-                <div class="flex items-center gap-2 mb-1">
-                    <span class="status-light bg-green-500 animate-pulse"></span>
-                    <span class="text-xs font-bold text-green-500 tracking-widest">SYSTEM ACTIVE</span>
-                </div>
-                <h1 class="text-4xl font-black tracking-tighter text-white">BATTERY <span class="text-orange-500">THERMAL</span> ENGINE 3.3</h1>
-                <p class="text-gray-500 text-xs">Creator: ADV Ken Hung & Randy Chen</p>
-                
-                <div class="flex gap-2 mt-4">
-                    <button onclick="showPage('calculator')" id="btn-calc" class="nav-btn active">CALCULATOR </button>
-                    <button onclick="showPage('documentation')" id="btn-doc" class="nav-btn">DOCUMENTATION </button>
-                </div>
+                <h1 class="text-4xl font-black uppercase tracking-tighter">電池廢熱計算分析 V3.5</h1>
+                <p class="text-zinc-400 font-bold tracking-[0.3em] text-[10px] uppercase mt-2">Professional Battery Thermal Diagnostic Tool</p>
             </div>
-            <div class="text-right hidden md:block">
+            <div class="flex rounded-sm overflow-hidden border border-zinc-700">
+                <button id="btn-calc" class="tab-btn active" onclick="switchTab('calc')">設計計算介面</button>
+                <button id="btn-ref" class="tab-btn" onclick="switchTab('ref')">技術公式及說明介面</button>
             </div>
         </header>
 
-        <!-- Page 1: Calculator -->
-        <div id="page-calculator" class="page active">
-            <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-                <!-- Left: Inputs -->
-                <div class="lg:col-span-5 space-y-6">
-                    <div class="industrial-card p-6 rounded-sm">
-                        <h2 class="text-xs font-bold text-gray-400 mb-6 uppercase tracking-widest flex items-center">
-                            <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4"></path></svg>
-                            參數設定庫 (Parameters)
-                        </h2>
-                        
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                            <div class="md:col-span-2 mb-2">
-                                <label class="label-text">運行模式 (Current Direction)</label>
-                                <div class="flex gap-2">
-                                    <button id="mode-discharge" onclick="setMode('discharge')" class="mode-btn active-discharge flex-1 py-2 rounded-sm font-bold text-xs">DISCHARGE (放電)</button>
-                                    <button id="mode-charge" onclick="setMode('charge')" class="mode-btn flex-1 py-2 rounded-sm font-bold text-xs">CHARGE (充電)</button>
-                                </div>
-                            </div>
-
-                            <div class="md:col-span-2 bg-blue-900/10 p-4 rounded border border-blue-700/30 mb-2">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="label-text mb-0 text-blue-400">即時電量 SOC</label>
-                                    <span id="soc-val" class="text-2xl font-black text-blue-400 font-mono bg-blue-500/10 px-3 py-1 rounded border border-blue-500/30">50%</span>
-                                </div>
-                                <div class="relative pt-1 px-1">
-                                    <input type="range" id="soc" min="0" max="100" value="50" class="cursor-pointer">
-                                    <div class="flex justify-between text-[11px] font-bold font-mono mt-3 text-gray-500 uppercase tracking-tighter">
-                                        <span class="text-red-500">7% CUT-OFF</span>
-                                        <span>50%</span>
-                                        <span>100%</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div class="md:col-span-2 bg-black/40 p-4 rounded border border-gray-700/50 mb-2">
-                                <div class="flex justify-between items-center mb-3">
-                                    <label class="label-text mb-0">健康狀態 SOH</label>
-                                    <span id="soh-val" class="text-2xl font-black text-orange-500 font-mono bg-orange-500/10 px-3 py-1 rounded border border-orange-500/30">100%</span>
-                                </div>
-                                <div class="relative pt-1 px-1">
-                                    <input type="range" id="soh" min="60" max="100" value="100" class="cursor-pointer">
-                                    <div class="flex justify-between text-[11px] font-bold font-mono mt-3 text-gray-500 uppercase tracking-tighter">
-                                        <span>EOL (60%)</span>
-                                        <span class="text-orange-400">NEW (100%)</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="label-text">負載電流 I</label>
-                                <div class="input-group flex">
-                                    <input type="number" id="current" value="20" step="1">
-                                    <span class="unit-tag">A</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="label-text">基準內阻 R₀</label>
-                                <div class="input-group flex">
-                                    <input type="number" id="resistance" value="0.015" step="0.001">
-                                    <span class="unit-tag">Ω</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="label-text">電芯溫度 T_cell</label>
-                                <div class="input-group flex">
-                                    <input type="number" id="temp" value="25" step="1">
-                                    <span class="unit-tag">°C</span>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="label-text">老化阻抗係數 κ</label>
-                                <div class="input-group flex">
-                                    <input type="number" id="aging-k" value="1.5" step="0.1">
-                                    <span class="unit-tag">×</span>
-                                </div>
-                            </div>
-                        </div>
+        <!-- 分頁 1: 計算器 -->
+        <div id="tab-content-calc" class="industrial-card">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-10 mb-10">
+                <div>
+                    <label class="label-text">操作狀態 Operation State</label>
+                    <select id="op_state" class="select-field" onchange="calculate()">
+                        <option value="discharge" selected>放電模式 (Discharge)</option>
+                        <option value="charge">充電模式 (Charge)</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="label-text">平均工作電流 Current (A)</label>
+                    <input type="number" id="bat_current" value="5.9" class="input-field" oninput="calculate()">
+                </div>
+                <div>
+                    <label class="label-text">平均工作ACIR (mΩ)</label>
+                    <input type="number" id="bat_resistance" value="13" class="input-field" oninput="calculate()">
+                </div>
+                <div>
+                    <label class="label-text">測試環境溫度 (°C)</label>
+                    <input type="number" id="temp_c" value="46" class="input-field" oninput="calculate()">
+                </div>
+                
+                <div class="md:col-span-2 bg-zinc-800/30 p-6 border border-zinc-700 rounded">
+                    <div class="flex justify-between items-center mb-4">
+                        <label class="label-text m-0 text-yellow-500">DCR 修正倍數 (ACIR to DCR)</label>
+                        <span id="multiplier_val" class="text-xl font-black mono-font text-white">3.5x</span>
+                    </div>
+                    <input type="range" id="dcr_multiplier" min="1.0" max="10.0" step="0.1" value="3.5" class="w-full h-2 bg-zinc-900 rounded-lg appearance-none cursor-pointer" oninput="calculate()">
+                    <div class="flex justify-between text-[9px] text-zinc-500 mt-2 font-bold uppercase tracking-widest">
+                        <span>Min (1.0x)</span>
+                        <span>Normal (3.0x)</span>
+                        <span>Worst Case (10.0x)</span>
                     </div>
                 </div>
 
-                <!-- Right: Display -->
-                <div class="lg:col-span-7 flex flex-col gap-6">
-                    <!-- Main Value Board -->
-                    <div class="industrial-card p-8 rounded-sm relative overflow-hidden bg-gradient-to-br from-[#2b2d31] to-[#1e1f22]">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-orange-500" id="indicator-strip"></div>
-                        
-                        <div class="flex justify-between items-start mb-8">
-                            <div>
-                                <h3 class="text-gray-400 text-xs font-bold tracking-widest uppercase mb-1">Instantaneous Heat Rate (即時發熱)</h3>
-                                <div class="flex items-baseline gap-2">
-                                    <span id="q-total" class="text-7xl font-black text-white italic">--</span>
-                                    <span class="text-2xl font-bold text-orange-500 italic">W</span>
-                                </div>
-                            </div>
-                            <div class="text-right flex flex-col items-end">
-                                <span id="mode-badge" class="px-2 py-1 bg-orange-500/10 text-orange-500 border border-orange-500/20 text-[10px] font-bold mb-2 tracking-widest uppercase">Discharging</span>
-                                <span class="text-[10px] text-gray-600 font-mono">SAMPLING: 1Hz</span>
-                            </div>
-                        </div>
+                <div class="md:col-span-2">
+                    <label class="label-text">熵熱係數 dE/dT (mV/K)</label>
+                    <input type="number" id="entropy_coeff" value="-0.5" class="input-field" oninput="calculate()">
+                    <p class="text-[10px] text-zinc-300 mt-2 italic">※ DCR修正倍數通常介於 2.0 ~ 4.0，熵熱係數通常介於 -0.7 ~ -0.3 之間。</p>
+                    <p class="text-[10px] text-zinc-300 mt-2 italic">※ 實測時，電池極耳（Tab）與導線的接觸點會有額外的 I2R ， ACIR 欄位可補償約 3 mΩ 治具接觸電阻。</p>
+                </div>
+            </div>
 
-                        <!-- 7% - 100% Average Box -->
-                        <div class="avg-box p-4 rounded mb-6 border-l-4 border-l-yellow-500">
-                            <div class="flex justify-between items-center">
-                                <div>
-                                    <p class="text-[10px] text-yellow-500 font-bold uppercase tracking-widest">Cycle Average (7% ~ 100% 積分計算數值)</p>
-                                    <p class="text-[9px] text-gray-500">全程平均發熱瓦特數</p>
-                                </div>
-                                <div class="text-right">
-                                    <span id="q-avg-total" class="text-3xl font-black text-white font-mono">--</span>
-                                    <span class="text-sm font-bold text-yellow-500 ml-1">W</span>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="grid grid-cols-3 gap-6 border-t border-gray-700 pt-8">
-                            <div>
-                                <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">焦耳熱 (I²R)</p>
-                                <p id="q-joule" class="text-xl font-bold text-blue-400 font-mono">--</p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">熵變熱 (IT dU/dT)</p>
-                                <p id="q-entropy" class="text-xl font-bold text-purple-400 font-mono">--</p>
-                            </div>
-                            <div>
-                                <p class="text-[10px] text-gray-500 uppercase font-bold mb-1">動態內阻 (R)</p>
-                                <p id="res-actual" class="text-xl font-bold text-emerald-400 font-mono">--</p>
-                            </div>
-                        </div>
+            <div class="result-panel">
+                <div class="grid grid-cols-3 gap-4 mb-8 text-center border-b border-zinc-800 pb-6">
+                    <div>
+                        <p class="text-[10px] text-zinc-500 font-black mb-1">DCR ESTIMATE</p>
+                        <p class="text-xl font-bold mono-font text-white"><span id="res_dcr">45.5</span><span class="text-xs ml-1 text-zinc-500">mΩ</span></p>
                     </div>
+                    <div>
+                        <p class="text-[10px] text-zinc-500 font-black mb-1">JOULE (P1)</p>
+                        <p class="text-xl font-bold mono-font text-white"><span id="res_joule">1.58</span><span class="text-xs ml-1 text-zinc-500">W</span></p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] text-zinc-500 font-black mb-1">ENTROPY (P2)</p>
+                        <p class="text-xl font-bold mono-font text-white"><span id="res_entropy">0.94</span><span class="text-xs ml-1 text-zinc-500">W</span></p>
+                    </div>
+                </div>
+                <div>
+                    <p class="label-text text-zinc-300">總積分平均發熱功率 Total Thermal Output</p>
+                    <div class="flex items-baseline gap-4 mt-2">
+                        <span id="total_res" class="text-8xl lcd-text leading-none">2.52</span>
+                        <span class="text-3xl font-black text-yellow-500 uppercase italic">Watts</span>
+                    </div>
+                </div>
+            </div>
+        </div>
 
+        <!-- 分頁 2: 技術文獻 -->
+        <div id="tab-content-ref" class="industrial-card hidden">
+            <h2 class="text-2xl font-black text-white mb-8 border-l-4 border-yellow-500 pl-4 uppercase">技術參考手冊 (Technical Reference)</h2>
+            
+            <div class="space-y-12">
+                <!-- 公式 -->
+                <section>
+                    <h3 class="text-sm font-black text-yellow-500 mb-4 tracking-widest">01. 電池發熱核心公式</h3>
+                    <div class="bg-zinc-900 p-6 border border-zinc-800 rounded">
+                        <p class="text-sm text-zinc-300 mb-6">總產熱功率由「焦耳熱」與「化學反應熵熱」兩部分組成：</p>
+                        <div class="text-xl md:text-2xl text-white font-serif text-center py-4 bg-black rounded">
+                            $$Q = I^2 \cdot R_{DCR} + \left[ - (I_{vector}) \cdot T \cdot \frac{dE}{dT} \right]$$
+                        </div>
+                        <ul class="mt-6 space-y-2 text-xs text-zinc-400 leading-relaxed">
+                            <li><b class="text-zinc-200">\(I\):</b> 電流大小。焦耳熱 \(I^2R\) 與方向無關。</li>
+                            <li><b class="text-zinc-200">\(I_{vector}\):</b> 向量電流。放電為正，充電為負。</li>
+                            <li><b class="text-zinc-200">\(R_{DCR}\):</b> 直流內阻。</li>
+                            <li><b class="text-zinc-200">\(T\):</b> 絕對溫度 (K)。</li>
+                            <li><b class="text-zinc-200">\(dE/dT\):</b> 熵熱係數。</li>
+                        </ul>
+                    </div>
+                </section>
+
+                <!-- DCR/ACIR -->
+                <section>
+                    <h3 class="text-sm font-black text-yellow-500 mb-4 tracking-widest">02. DCR / ACIR 比值說明</h3>
+                    <p class="text-sm text-zinc-300 mb-4">ACIR (1kHz) 僅反映電解液阻抗，而實際產熱必須考慮持續電流下的 DCR (直流內阻)。</p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div class="industrial-card p-4 text-[11px] font-mono border-l-blue-500">
-                            <span class="text-blue-500 font-bold block mb-2 underline text-xs italic">熱化學平衡 (動態)</span>
-                            Φ(SOC) = I² R(SOC, T, SOH) + I T ∂U/∂T(SOC)
+                        <div class="bg-zinc-900 p-4 border border-zinc-800 rounded">
+                            <h4 class="text-xs font-bold text-white mb-2">● 常見情境比值</h4>
+                            <table class="w-full text-[11px] text-zinc-400">
+                                <tr class="border-b border-zinc-800">
+                                    <td class="py-2">大容量電池</td>
+                                    <td class="text-right text-zinc-200">1.5x ~ 2.5x</td>
+                                </tr>
+                                <tr class="border-b border-zinc-800">
+                                    <td class="py-2">標準狀態</td>
+                                    <td class="text-right text-zinc-200">2.5x ~ 4.5x</td>
+                                </tr>
+                                <tr>
+                                    <td class="py-2">高齡電池</td>
+                                    <td class="text-right text-red-400 font-bold">4.5x ~ 10.0x</td>
+                                </tr>
+                            </table>
                         </div>
-                        <div class="industrial-card p-4 text-[11px] font-mono border-l-emerald-500">
-                            <span class="text-emerald-500 font-bold block mb-2 underline text-xs italic">全程平均公式</span>
-                            Q_avg = (1 / 0.93) ∫ Φ(s) ds [from 0.07 to 1.00]
+                        <div class="bg-zinc-800/20 p-4 border border-zinc-700 rounded">
+                            <p class="text-[11px] text-zinc-400 leading-loose italic">
+                                * 註：持續放電下，電池內部的極化阻抗可能隨時間累積而增加。實測中，DCR 通常隨放電深度（DOD）增加而上升，產熱高峰往往在放電後半段。
+                            </p>
                         </div>
                     </div>
-                </div>
+                </section>
+
+                <!-- dE/dT -->
+                <section>
+                    <h3 class="text-sm font-black text-yellow-500 mb-4 tracking-widest">03. 熵熱係數 (dE/dT) 範圍建議</h3>
+                    <div class="bg-zinc-900 p-6 border border-zinc-800 rounded">
+                        <p class="text-sm text-zinc-300 mb-4">此值隨 SOC (電量) 變化，影響電池是「化學放熱」或「化學吸熱」。</p>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                            <div class="text-center">
+                                <p class="text-[10px] text-zinc-500 mb-1">建議範圍</p>
+                                <p class="text-lg font-bold text-white">-0.7 ~ -0.3 <span class="text-xs text-zinc-500">mV/K</span></p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-[10px] text-zinc-500 mb-1">放電放熱 (常見於滿電)</p>
+                                <p class="text-lg font-bold text-red-500">-0.7 ~ -0.6</p>
+                            </div>
+                            <div class="text-center">
+                                <p class="text-[10px] text-zinc-500 mb-1">放電吸熱 (中段 SOC)</p>
+                                <p class="text-lg font-bold text-blue-500">-0.6 ~ -0.3</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
             </div>
         </div>
 
-        <!-- Page 2: Documentation -->
-        <div id="page-documentation" class="page">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div class="industrial-card p-6 rounded-sm border-l-4 border-l-orange-500 bg-black/20">
-                    <h3 class="text-sm font-bold text-orange-500 mb-4 font-mono uppercase tracking-widest flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                        [老化係數參考值基準]
-                    </h3>
-                    <ul class="text-xs leading-relaxed text-gray-400 font-mono list-disc pl-5 space-y-2">
-                        <li><span class="text-gray-200">LFP (磷酸鐵鋰):</span> 0.8 ~ 1.5</li>
-                        <li><span class="text-gray-200">NMC/NCA (三元):</span> 1.5 ~ 2.5</li>
-                        <li><span class="text-orange-400 font-bold">EOL 阻抗翻倍基準:</span> 5.0</li>
-                    </ul>
-                </div>
-
-                <div class="industrial-card p-6 rounded-sm border-l-4 border-l-yellow-500 bg-yellow-950/10">
-                    <h3 class="text-sm font-bold text-yellow-500 mb-4 font-mono uppercase tracking-widest flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                        [全程平均發熱量說明]
-                    </h3>
-                    <p class="text-xs leading-relaxed text-gray-400 font-mono">
-                        本引擎模擬電池從 <span class="text-white">100% SOC 降低至 7% SOC</span> (斷電閾值) 的動態過程。由於低電量時內阻呈指數上升，平均值通常會高於 50% SOC 時的即時發熱量。這對於評估散熱系統的長期負荷能力至關重要。
-                    </p>
-                </div>
-
-                <div class="industrial-card p-6 rounded-sm border-l-4 border-l-red-500 bg-red-950/10">
-                    <h3 class="text-sm font-bold text-red-500 mb-4 font-mono uppercase tracking-widest flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>
-                        [高溫風險與熱不穩定性]
-                    </h3>
-                    <p class="text-xs leading-relaxed text-gray-400 font-mono">
-                        一旦溫度超過 60°C，SEI 膜會開始分解，引發放熱副反應。若平均發熱率超過系統散熱極限，電池將進入熱失控狀態。
-                    </p>
-                </div>
-
-                <div class="industrial-card p-6 rounded-sm border-l-4 border-l-blue-500 bg-blue-950/10">
-                    <h3 class="text-sm font-bold text-blue-500 mb-4 font-mono uppercase tracking-widest flex items-center">
-                        <svg class="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                        [什麼是電池 SEI 膜]
-                    </h3>
-                    <p class="text-xs leading-relaxed text-gray-400 font-mono">
-                        SEI 膜是電池的「皮膚」，能防止電解液持續消耗。它是熱失控防護的第一道關卡，對高溫極其敏感。
-                    </p>
-                </div>
-            </div>
-        </div>
+        <footer class="mt-8 flex justify-between items-center text-zinc-300 text-[9px] font-black tracking-[0.3em] uppercase">
+            <span>CREATOR:KEN HUNG & RANDY CHEN</span>
+            <span>Ref: V3.5 (Charge/Discharge Integrated)</span>
+        </footer>
     </div>
 
-    <input type="hidden" id="entropy-base" value="-0.00045">
-    <input type="hidden" id="arrhenius" value="3200">
-
     <script>
-        // 禁用右鍵 (遵照使用者指令)
         document.addEventListener('contextmenu', e => e.preventDefault());
 
-        let currentMode = 'discharge'; 
-        const ids = ['current', 'resistance', 'temp', 'soh', 'aging-k', 'soc'];
-
-        function showPage(pageName) {
-            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-            document.getElementById('page-' + pageName).classList.add('active');
-            document.getElementById('btn-calc').classList.remove('active');
-            document.getElementById('btn-doc').classList.remove('active');
-            if (pageName === 'calculator') document.getElementById('btn-calc').classList.add('active');
-            else document.getElementById('btn-doc').classList.add('active');
-        }
-
-        function setMode(mode) {
-            currentMode = mode;
-            const dBtn = document.getElementById('mode-discharge');
-            const cBtn = document.getElementById('mode-charge');
-            const badge = document.getElementById('mode-badge');
-            const strip = document.getElementById('indicator-strip');
-
-            if (mode === 'discharge') {
-                dBtn.classList.add('active-discharge');
-                cBtn.classList.remove('active-charge');
-                badge.innerText = 'DISCHARGING';
-                badge.className = 'px-2 py-1 bg-orange-500/10 text-orange-500 border border-orange-500/20 text-[10px] font-bold mb-2 tracking-widest uppercase';
-                strip.style.backgroundColor = 'var(--accent-orange)';
-            } else {
-                cBtn.classList.add('active-charge');
-                dBtn.classList.remove('active-discharge');
-                badge.innerText = 'CHARGING';
-                badge.className = 'px-2 py-1 bg-blue-500/10 text-blue-500 border border-blue-500/20 text-[10px] font-bold mb-2 tracking-widest uppercase';
-                strip.style.backgroundColor = '#3b82f6';
-            }
-            updateUI();
-        }
-
-        function calculateHeatAtSOC(s, I, R0, Tc, SOH, kappa, dUdT_base, EaR) {
-            const R_base_aged = R0 * (1 + kappa * (1 - SOH));
-            const R_soc_effect = 1 + (0.1 / (s + 0.05)) + (0.1 / (1.05 - s));
-            const R_with_soc = R_base_aged * (R_soc_effect * 0.5); 
-
-            const T = Tc + 273.15;
-            const Tref = 25 + 273.15;
-            const RT = R_with_soc * Math.exp(EaR * (1/T - 1/Tref));
-            const dUdT_dynamic = dUdT_base * (1 + 0.5 * Math.sin(s * Math.PI * 4));
-
-            const Qjoule = Math.pow(I, 2) * RT;
-            const IDir = (currentMode === 'discharge') ? I : -I;
-            const Qentropy = IDir * T * dUdT_dynamic;
+        function switchTab(tab) {
+            const tabs = ['calc', 'ref'];
+            tabs.forEach(t => {
+                const content = document.getElementById(`tab-content-${t}`);
+                const btn = document.getElementById(`btn-${t}`);
+                if (content) content.classList.add('hidden');
+                if (btn) btn.classList.remove('active');
+            });
             
-            return { total: Qjoule + Qentropy, joule: Qjoule, entropy: Qentropy, resistance: RT };
-        }
-        
-        function updateUI() {
-            let I = parseFloat(document.getElementById('current').value) || 0;
-            const R0 = parseFloat(document.getElementById('resistance').value) || 0;
-            const Tc = parseFloat(document.getElementById('temp').value) || 0;
-            const SOH = (parseFloat(document.getElementById('soh').value) || 100) / 100;
-            const currentSOC = (parseFloat(document.getElementById('soc').value) || 50) / 100;
-            const kappa = parseFloat(document.getElementById('aging-k').value) || 0;
-            const dUdT_base = parseFloat(document.getElementById('entropy-base').value);
-            const EaR = parseFloat(document.getElementById('arrhenius').value);
-
-            document.getElementById('soh-val').innerText = (SOH * 100).toFixed(0) + '%';
-            document.getElementById('soc-val').innerText = (currentSOC * 100).toFixed(0) + '%';
-
-            const instant = calculateHeatAtSOC(currentSOC, I, R0, Tc, SOH, kappa, dUdT_base, EaR);
-
-            document.getElementById('q-total').innerText = instant.total.toFixed(2);
-            document.getElementById('q-joule').innerText = instant.joule.toFixed(2) + ' W';
-            document.getElementById('q-entropy').innerText = instant.entropy.toFixed(2) + ' W';
-            document.getElementById('res-actual').innerText = instant.resistance.toFixed(4) + ' Ω';
-            
-            let sumHeat = 0;
-            const steps = 30; 
-            const startSOC = 0.07;
-            const endSOC = 1.00;
-            const stepSize = (endSOC - startSOC) / steps;
-
-            for (let i = 0; i <= steps; i++) {
-                const s = startSOC + i * stepSize;
-                const h = calculateHeatAtSOC(s, I, R0, Tc, SOH, kappa, dUdT_base, EaR);
-                const weight = (i === 0 || i === steps) ? 0.5 : 1;
-                sumHeat += h.total * weight;
-            }
-            const avgHeat = sumHeat / steps;
-            document.getElementById('q-avg-total').innerText = avgHeat.toFixed(2);
-
-            const qDisp = document.getElementById('q-total');
-            if (instant.total > 50) qDisp.className = 'text-7xl font-black text-red-500 italic';
-            else if (instant.total > 20) qDisp.className = 'text-7xl font-black text-orange-500 italic';
-            else qDisp.className = 'text-7xl font-black text-white italic';
+            const activeContent = document.getElementById(`tab-content-${tab}`);
+            const activeBtn = document.getElementById(`btn-${tab}`);
+            if (activeContent) activeContent.classList.remove('hidden');
+            if (activeBtn) activeBtn.classList.add('active');
         }
 
-        ids.forEach(id => {
-            document.getElementById(id).addEventListener('input', updateUI);
-        });
+        function calculate() {
+            const opState = document.getElementById('op_state').value;
+            const I_val = parseFloat(document.getElementById('bat_current').value) || 0;
+            const acir = parseFloat(document.getElementById('bat_resistance').value) || 0;
+            const mult = parseFloat(document.getElementById('dcr_multiplier').value) || 1;
+            const dEdT_mV = parseFloat(document.getElementById('entropy_coeff').value) || 0;
+            const temp_c = parseFloat(document.getElementById('temp_c').value) || 0;
 
-        window.onload = updateUI;
+            document.getElementById('multiplier_val').innerText = mult.toFixed(1) + 'x';
+
+            const dcr_mOhm = acir * mult;
+            const dcr_Ohm = dcr_mOhm / 1000;
+            const T_K = temp_c + 273.15;
+            const dEdT = dEdT_mV / 1000;
+
+            const p_joule = I_val * I_val * dcr_Ohm;
+            let i_vector = (opState === 'discharge') ? I_val : -I_val;
+            const p_entropy = -1 * i_vector * T_K * dEdT;
+
+            const p_total = p_joule + p_entropy;
+
+            document.getElementById('res_dcr').innerText = dcr_mOhm.toFixed(1);
+            document.getElementById('res_joule').innerText = p_joule.toFixed(2);
+            document.getElementById('res_entropy').innerText = p_entropy.toFixed(2);
+            document.getElementById('total_res').innerText = Math.max(0, p_total).toFixed(2);
+        }
+
+        window.onload = calculate;
     </script>
 </body>
 </html>
-
